@@ -29,3 +29,11 @@ python .\init_db.py
 
 >[!NOTE]
 >Este proceso puede tardar un tiempo.
+
+## Ejecutar la creación de backups
+
+Ejecute el siguiente comando:
+
+```shell
+npm run backup
+```

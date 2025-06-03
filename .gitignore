@@ -1,1 +1,5 @@
 .env
+node_modules
+package-lock.json
+# pg_backup*.dump
+# mysql_backup*.sql

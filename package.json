@@ -1,0 +1,25 @@
+{
+  "name": "proyecto-bd-avanzada-2025",
+  "version": "1.0.0",
+  "description": "1. Crear un archivo .env en la raiz de la carpeta con los siguientes datos",
+  "main": "index.js",
+  "scripts": {
+    "backup": "node backup.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/valeriaZerain/proyecto-bd-avanzada-2025.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/valeriaZerain/proyecto-bd-avanzada-2025/issues"
+  },
+  "homepage": "https://github.com/valeriaZerain/proyecto-bd-avanzada-2025#readme",
+  "dependencies": {
+    "cron": "^4.3.1",
+    "dotenv": "^16.5.0"
+  }
+}
