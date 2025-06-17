@@ -118,6 +118,31 @@ services:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
+  
+  # ============ Redis ============
+  cache:
+    image: redis:6.2-alpine
+    container_name: redis-cache
+    command: redis-server --save 20 1 --loglevel warning --requirepass password123
+    environment:
+      REDIS_PASSWORD: password123
+    ports:
+      - "6379:6379"
+    volumes:
+      - cache:/data
+
+  mongo:
+    image: mongo:6.0
+    restart: always
+    container_name: mongo
+    ports:
+      - '27017:27017'
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${DB_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - mongo_data:/data/db
+
 
 volumes:
   # PostgreSQL Shard 1
@@ -132,3 +157,9 @@ volumes:
 
   # MySQL
   mysql_data:
+
+  #Redis
+  cache:
+
+  #Mongo
+  mongo_data:
