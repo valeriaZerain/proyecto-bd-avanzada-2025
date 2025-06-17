@@ -1,18 +1,111 @@
 version: '3.8'
 
 services:
-  postgres_db:
-    image: postgres:12-alpine
-    container_name: clientes-postgres
-    environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: clientes
+  # ============ POSTGRESQL SHARD 1 ============
+  postgres_shard1_primary:
+    image: bitnami/postgresql:14
+    container_name: postgres_shard1_primary
     ports:
       - "5432:5432"
+    environment:
+      - POSTGRESQL_REPLICATION_MODE=master
+      - POSTGRESQL_USERNAME=${DB_USER}
+      - POSTGRESQL_PASSWORD=${DB_PASSWORD}
+      - POSTGRESQL_DATABASE=${DB_NAME_SHARD}
+      - POSTGRESQL_REPLICATION_USER=replicator
+      - POSTGRESQL_REPLICATION_PASSWORD=replicator_password
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - shard1_primary_data:/bitnami/postgresql
 
+  postgres_shard1_replica1:
+    image: bitnami/postgresql:14
+    container_name: postgres_shard1_replica1
+    ports:
+      - "5433:5432"
+    depends_on:
+      - postgres_shard1_primary
+    environment:
+      - POSTGRESQL_REPLICATION_MODE=slave
+      - POSTGRESQL_USERNAME=${DB_USER}
+      - POSTGRESQL_PASSWORD=${DB_PASSWORD}
+      - POSTGRESQL_MASTER_HOST=postgres_shard1_primary
+      - POSTGRESQL_MASTER_PORT_NUMBER=5432
+      - POSTGRESQL_REPLICATION_USER=replicator
+      - POSTGRESQL_REPLICATION_PASSWORD=replicator_password
+    volumes:
+      - shard1_replica1_data:/bitnami/postgresql
+
+  postgres_shard1_replica2:
+    image: bitnami/postgresql:14
+    container_name: postgres_shard1_replica2
+    ports:
+      - "5434:5432"
+    depends_on:
+      - postgres_shard1_primary
+    environment:
+      - POSTGRESQL_REPLICATION_MODE=slave
+      - POSTGRESQL_USERNAME=${DB_USER}
+      - POSTGRESQL_PASSWORD=${DB_PASSWORD}
+      - POSTGRESQL_MASTER_HOST=postgres_shard1_primary
+      - POSTGRESQL_MASTER_PORT_NUMBER=5432
+      - POSTGRESQL_REPLICATION_USER=replicator
+      - POSTGRESQL_REPLICATION_PASSWORD=replicator_password
+    volumes:
+      - shard1_replica2_data:/bitnami/postgresql
+
+  # ============ POSTGRESQL SHARD 2 ============
+  postgres_shard2_primary:
+    image: bitnami/postgresql:14
+    container_name: postgres_shard2_primary
+    ports:
+      - "5435:5432"
+    environment:
+      - POSTGRESQL_REPLICATION_MODE=master
+      - POSTGRESQL_USERNAME=${DB_USER}
+      - POSTGRESQL_PASSWORD=${DB_PASSWORD}
+      - POSTGRESQL_DATABASE=${DB_NAME_SHARD}
+      - POSTGRESQL_REPLICATION_USER=replicator
+      - POSTGRESQL_REPLICATION_PASSWORD=replicator_password
+    volumes:
+      - shard2_primary_data:/bitnami/postgresql
+
+  postgres_shard2_replica1:
+    image: bitnami/postgresql:14
+    container_name: postgres_shard2_replica1
+    ports:
+      - "5436:5432"
+    depends_on:
+      - postgres_shard2_primary
+    environment:
+      - POSTGRESQL_REPLICATION_MODE=slave
+      - POSTGRESQL_USERNAME=${DB_USER}
+      - POSTGRESQL_PASSWORD=${DB_PASSWORD}
+      - POSTGRESQL_MASTER_HOST=postgres_shard2_primary
+      - POSTGRESQL_MASTER_PORT_NUMBER=5432
+      - POSTGRESQL_REPLICATION_USER=replicator
+      - POSTGRESQL_REPLICATION_PASSWORD=replicator_password
+    volumes:
+      - shard2_replica1_data:/bitnami/postgresql
+
+  postgres_shard2_replica2:
+    image: bitnami/postgresql:14
+    container_name: postgres_shard2_replica2
+    ports:
+      - "5437:5432"
+    depends_on:
+      - postgres_shard2_primary
+    environment:
+      - POSTGRESQL_REPLICATION_MODE=slave
+      - POSTGRESQL_USERNAME=${DB_USER}
+      - POSTGRESQL_PASSWORD=${DB_PASSWORD}
+      - POSTGRESQL_MASTER_HOST=postgres_shard2_primary
+      - POSTGRESQL_MASTER_PORT_NUMBER=5432
+      - POSTGRESQL_REPLICATION_USER=replicator
+      - POSTGRESQL_REPLICATION_PASSWORD=replicator_password
+    volumes:
+      - shard2_replica2_data:/bitnami/postgresql
+
+  # ============ MYSQL ============
   mysql_db:
     image: mysql:8
     container_name: inventario-mysql
@@ -27,5 +120,15 @@ services:
       - mysql_data:/var/lib/mysql
 
 volumes:
-  postgres_data:
+  # PostgreSQL Shard 1
+  shard1_primary_data:
+  shard1_replica1_data:
+  shard1_replica2_data:
+
+  # PostgreSQL Shard 2
+  shard2_primary_data:
+  shard2_replica1_data:
+  shard2_replica2_data:
+
+  # MySQL
   mysql_data:

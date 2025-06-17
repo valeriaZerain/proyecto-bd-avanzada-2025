@@ -39,6 +39,14 @@ CREATE TABLE Pedidos (
     FOREIGN KEY (cupon_id) REFERENCES Cupones(id)
 );
 
+-- Métodos de pago
+DROP TABLE IF EXISTS MetodosPago CASCADE;
+CREATE TABLE MetodosPago (
+    id SERIAL PRIMARY KEY,
+    tipo VARCHAR(50),
+    descripcion VARCHAR(100)
+);
+
 -- Detalles del pedido
 DROP TABLE IF EXISTS DetallesPedido CASCADE;
 CREATE TABLE DetallesPedido (
@@ -48,14 +56,7 @@ CREATE TABLE DetallesPedido (
     cantidad INT,
     precio_unitario DECIMAL(10,2),
     FOREIGN KEY (pedido_id) REFERENCES Pedidos(id)
-);
-
--- Métodos de pago
-DROP TABLE IF EXISTS MetodosPago CASCADE;
-CREATE TABLE MetodosPago (
-    id SERIAL PRIMARY KEY,
-    tipo VARCHAR(50),
-    descripcion VARCHAR(100)
+    FOREIGN KEY (metodo_id) REFERENCES MetodosPago(id)
 );
 
 -- Direcciones
