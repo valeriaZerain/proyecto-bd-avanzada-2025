@@ -2,8 +2,13 @@
 1. Crear un archivo .env en la raiz de la carpeta con los siguientes datos
 
 ```
-DB_USER=user
-DB_PASSWORD=password
+DB_USER=admin
+DB_PASSWORD=superseguro
+
+DB_NAME_SHARD=moduloContable
+
+MYSQL_REPL_USER=replicator
+MYSQL_REPL_PASSWORD=superseguro 
 ```
 
 2. Abrir Git Bash o PowerShell dentro del proyecto
