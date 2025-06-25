@@ -27,6 +27,14 @@ CREATE TABLE CarritoItems (
     FOREIGN KEY (carrito_id) REFERENCES Carritos(id)
 );
 
+-- Métodos de pago
+DROP TABLE IF EXISTS MetodosPago CASCADE;
+CREATE TABLE MetodosPago (
+    id SERIAL PRIMARY KEY,
+    tipo VARCHAR(50),
+    descripcion VARCHAR(100)
+);
+
 -- Pedidos
 DROP TABLE IF EXISTS Pedidos CASCADE;
 CREATE TABLE Pedidos (
@@ -36,15 +44,9 @@ CREATE TABLE Pedidos (
     estado VARCHAR(20),
     total DECIMAL(10,2),
     cupon_id INT,
-    FOREIGN KEY (cupon_id) REFERENCES Cupones(id)
-);
-
--- Métodos de pago
-DROP TABLE IF EXISTS MetodosPago CASCADE;
-CREATE TABLE MetodosPago (
-    id SERIAL PRIMARY KEY,
-    tipo VARCHAR(50),
-    descripcion VARCHAR(100)
+    metodo_id INT,
+    FOREIGN KEY (cupon_id) REFERENCES Cupones(id),
+    FOREIGN KEY (metodo_id) REFERENCES MetodosPago(id)
 );
 
 -- Detalles del pedido
@@ -52,11 +54,10 @@ DROP TABLE IF EXISTS DetallesPedido CASCADE;
 CREATE TABLE DetallesPedido (
     id SERIAL PRIMARY KEY,
     pedido_id INT,
-    libro_isbn INT, --este dato se simulara
+    libro_isbn INT,
     cantidad INT,
     precio_unitario DECIMAL(10,2),
     FOREIGN KEY (pedido_id) REFERENCES Pedidos(id)
-    FOREIGN KEY (metodo_id) REFERENCES MetodosPago(id)
 );
 
 -- Direcciones

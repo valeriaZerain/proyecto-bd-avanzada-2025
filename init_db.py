@@ -47,7 +47,7 @@ pg_conn = psycopg2.connect(
     port=5432,
     user=DB_USER,
     password=DB_PASSWORD,
-    dbname="clientes"
+    dbname="moduloContable"
 )
 pg_cursor = pg_conn.cursor()
 
@@ -139,6 +139,8 @@ def insertar_postgres():
             fake.date_between(start_date='today', end_date='+30d'),
             random.randint(5, 100)
         ))
+    pg_cursor.execute("SELECT id FROM Cupones")
+    cupon_ids = [row[0] for row in pg_cursor.fetchall()]
 
     for _ in range(NUM_CARRITOS):
         usuario_id = random.choice(usuarios_ids)
@@ -150,16 +152,26 @@ def insertar_postgres():
                 INSERT INTO CarritoItems (carrito_id, libro_isbn, cantidad)
                 VALUES (%s, %s, %s)
             """, (carrito_id, libro_id, random.randint(1, 3)))
+    for metodo in METODOS_PAGO:
+        pg_cursor.execute("""
+            INSERT INTO MetodosPago (tipo, descripcion)
+            VALUES (%s, %s)
+        """, (metodo, fake.text(max_nb_chars=50)))
+    pg_cursor.execute("SELECT id FROM MetodosPago")
+    metodo_ids = [row[0] for row in pg_cursor.fetchall()]
 
     for _ in range(NUM_PEDIDOS):
+        metodo_id = random.choice(metodo_ids)
         usuario_id = random.choice(usuarios_ids)
         estado = random.choice(['pendiente', 'enviado', 'entregado'])
         total = round(random.uniform(20, 500), 2)
+        cupon_id = random.choice(cupon_ids) if random.random() < 0.3 else None
+
         pg_cursor.execute("""
-            INSERT INTO Pedidos (usuario_id, estado, total)
-            VALUES (%s, %s, %s)
+            INSERT INTO Pedidos (usuario_id, estado, total, metodo_id, cupon_id)
+            VALUES (%s, %s, %s, %s, %s)
             RETURNING id
-        """, (usuario_id, estado, total))
+        """, (usuario_id, estado, total, metodo_id, cupon_id))
         pedido_id = pg_cursor.fetchone()[0]
 
         for _ in range(random.randint(1, 3)):
@@ -168,12 +180,6 @@ def insertar_postgres():
                 INSERT INTO DetallesPedido (pedido_id, libro_isbn, cantidad, precio_unitario)
                 VALUES (%s, %s, %s, %s)
             """, (pedido_id, libro_id, random.randint(1, 2), round(random.uniform(10, 100), 2)))
-
-    for metodo in METODOS_PAGO:
-        pg_cursor.execute("""
-            INSERT INTO MetodosPago (tipo, descripcion)
-            VALUES (%s, %s)
-        """, (metodo, fake.text(max_nb_chars=50)))
 
     for _ in range(NUM_DIRECCIONES):
         usuario_id = random.choice(usuarios_ids)
@@ -202,7 +208,6 @@ def insertar_postgres():
     pg_conn.commit()
     
 def vaciar_postgres():
-    pg_cursor.execute("TRUNCATE TABLE LogsPedidos CASCADE")
     pg_cursor.execute("TRUNCATE TABLE DetallesPedido CASCADE")
     pg_cursor.execute("TRUNCATE TABLE Pedidos CASCADE")
     pg_cursor.execute("TRUNCATE TABLE CarritoItems CASCADE")
@@ -210,6 +215,7 @@ def vaciar_postgres():
     pg_cursor.execute("TRUNCATE TABLE Direcciones CASCADE")
     pg_cursor.execute("TRUNCATE TABLE Cupones CASCADE")
     pg_cursor.execute("TRUNCATE TABLE MetodosPago CASCADE")
+    pg_cursor.execute("TRUNCATE TABLE LogsPedidos CASCADE")
     
 if __name__ == "__main__":
     print("Reiniciando MySQL... ")
