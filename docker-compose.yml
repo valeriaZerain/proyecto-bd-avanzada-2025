@@ -1,6 +1,131 @@
-version: '3.8'
+version: '3.9'
 
 services:
+  # ============ MYSQL SHARD 1 ============
+  mysql_shard1_master:
+    image: mysql:latest
+    container_name: mysql_shard1_master
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DB_SHARD}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_HOST: "%"
+    ports:
+      - "3306:3306"
+    command: --server-id=1
+      --log-bin=mysql-bin
+      --binlog-format=ROW
+      --gtid-mode=ON
+      --enforce-gtid-consistency=ON
+    volumes:
+      - ./shard1_master_data:/var/lib/mysql
+
+  mysql_shard1_slave1:
+    image: mysql:latest
+    container_name: mysql_shard1_slave1
+    depends_on:
+      - mysql_shard1_master
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DB_SHARD}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "3307:3306"
+    command: --server-id=2
+      --relay-log=relay-bin
+      --log-bin=mysql-bin
+      --binlog-format=ROW
+      --gtid-mode=ON
+      --enforce-gtid-consistency=ON
+    volumes:
+      - ./shard1_slave1_data:/var/lib/mysql
+
+  mysql_shard1_slave2:
+    image: mysql:latest
+    container_name: mysql_shard1_slave2
+    depends_on:
+      - mysql_shard1_master
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DB_SHARD}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "3308:3306"
+    command: --server-id=3
+      --relay-log=relay-bin
+      --log-bin=mysql-bin
+      --binlog-format=ROW
+      --gtid-mode=ON
+      --enforce-gtid-consistency=ON
+    volumes:
+      - ./shard1_slave2_data:/var/lib/mysql
+
+  # ============ MYSQL SHARD 2 ============
+
+  mysql_shard2_master:
+    image: mysql:latest
+    container_name: mysql_shard2_master
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DB_SHARD}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_HOST: "%"
+    ports:
+      - "3309:3306"
+    command: --server-id=11
+      --log-bin=mysql-bin
+      --binlog-format=ROW
+      --gtid-mode=ON
+      --enforce-gtid-consistency=ON
+    volumes:
+      - ./shard2_master_data:/var/lib/mysql
+
+  mysql_shard2_slave1:
+    image: mysql:latest
+    container_name: mysql_shard2_slave1
+    depends_on:
+      - mysql_shard2_master
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DB_SHARD}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "3310:3306"
+    command: --server-id=12
+      --relay-log=relay-bin
+      --log-bin=mysql-bin
+      --binlog-format=ROW
+      --gtid-mode=ON
+      --enforce-gtid-consistency=ON
+    volumes:
+      - ./shard2_slave1_data:/var/lib/mysql
+
+  mysql_shard2_slave2:
+    image: mysql:latest
+    container_name: mysql_shard2_slave2
+    depends_on:
+      - mysql_shard2_master
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DB_SHARD}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "3311:3306"
+    command: --server-id=13
+      --relay-log=relay-bin
+      --log-bin=mysql-bin
+      --binlog-format=ROW
+      --gtid-mode=ON
+      --enforce-gtid-consistency=ON
+    volumes:
+      - ./shard2_slave2_data:/var/lib/mysql
+
   # ============ POSTGRESQL SHARD 1 ============
   postgres_shard1_primary:
     image: bitnami/postgresql:14
@@ -11,7 +136,7 @@ services:
       - POSTGRESQL_REPLICATION_MODE=master
       - POSTGRESQL_USERNAME=${DB_USER}
       - POSTGRESQL_PASSWORD=${DB_PASSWORD}
-      - POSTGRESQL_DATABASE=${DB_NAME_SHARD}
+      - POSTGRESQL_DATABASE=${POSTGRES_DB_SHARD}
       - POSTGRESQL_REPLICATION_USER=replicator
       - POSTGRESQL_REPLICATION_PASSWORD=replicator_password
     volumes:
@@ -63,7 +188,7 @@ services:
       - POSTGRESQL_REPLICATION_MODE=master
       - POSTGRESQL_USERNAME=${DB_USER}
       - POSTGRESQL_PASSWORD=${DB_PASSWORD}
-      - POSTGRESQL_DATABASE=${DB_NAME_SHARD}
+      - POSTGRESQL_DATABASE=${POSTGRES_DB_SHARD}
       - POSTGRESQL_REPLICATION_USER=replicator
       - POSTGRESQL_REPLICATION_PASSWORD=replicator_password
     volumes:
@@ -105,22 +230,7 @@ services:
     volumes:
       - shard2_replica2_data:/bitnami/postgresql
 
-  # ============ MYSQL ============
-  mysql_db:
-    image: mysql:8
-    container_name: inventario-mysql
-    environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
-      MYSQL_DATABASE: inventario
-      MYSQL_USER: ${DB_USER}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-      - ./mysql-init:/docker-entrypoint-initdb.d
-  
-  # ============ Redis ============
+  # ============ REDIS ============
   cache:
     image: redis:6.2-alpine
     container_name: redis-cache
@@ -132,6 +242,7 @@ services:
     volumes:
       - cache:/data
 
+  # ============ MONGO ============
   mongo:
     image: mongo:6.0
     restart: always
@@ -144,23 +255,25 @@ services:
     volumes:
       - mongo_data:/data/db
 
-
 volumes:
-  # PostgreSQL Shard 1
+  # PostgreSQL
   shard1_primary_data:
   shard1_replica1_data:
   shard1_replica2_data:
-
-  # PostgreSQL Shard 2
   shard2_primary_data:
   shard2_replica1_data:
   shard2_replica2_data:
 
   # MySQL
-  mysql_data:
+  shard1_master_data:
+  shard1_slave1_data:
+  shard1_slave2_data:
+  shard2_master_data:
+  shard2_slave1_data:
+  shard2_slave2_data:
 
-  #Redis
+  # Redis
   cache:
 
-  #Mongo
+  # Mongo
   mongo_data:

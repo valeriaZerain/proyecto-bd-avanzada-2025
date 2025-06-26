@@ -3,3 +3,9 @@ node_modules
 package-lock.json
 # pg_backup*.dump
 # mysql_backup*.sql
+shard1_master_data
+shard1_slave1_data
+shard1_slave2_data
+shard2_master_data
+shard2_slave1_data
+shard2_slave2_data
