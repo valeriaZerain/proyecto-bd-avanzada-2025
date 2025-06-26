@@ -81,4 +81,4 @@ CREATE TABLE LogsPedidos (
     descripcion TEXT,
     fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (pedido_id) REFERENCES Pedidos(id)
-);
+) PARTITION BY RANGE (fecha);
