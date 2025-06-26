@@ -6,7 +6,7 @@ import psycopg2
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
 
-# Configuraciones de cantidad
+# Configuraciones
 NUM_USUARIOS = 500
 NUM_AUTORES = 700
 NUM_EDITORIALES = 40
@@ -65,7 +65,6 @@ mysql2_cur = mysql2.cursor()
 pg1_cur = pg1.cursor()
 pg2_cur = pg2.cursor()
 
-
 usuarios = []
 autores = []
 categorias = []
@@ -74,7 +73,9 @@ libros_shard1 = []
 libros_shard2 = []
 libros_compartidos = []
 
-# Distribución de libros: 45%-45%-10%
+isbn_counter = 1000000000
+isbn_libros = {}
+
 def distribuir_libros():
     total = list(range(NUM_LIBROS))
     random.shuffle(total)
@@ -83,21 +84,18 @@ def distribuir_libros():
     return total[:num_45], total[num_45:num_45*2], total[-num_10:]
 
 libros1_idx, libros2_idx, libros_both_idx = distribuir_libros()
-
 usuarios_postgres1 = set(random.sample(range(NUM_USUARIOS), NUM_USUARIOS // 2))
 usuarios_postgres2 = set(range(NUM_USUARIOS)) - usuarios_postgres1
 
 def insertar_datos_mysql():
-    global autores, categorias_ids, editoriales
+    global autores, categorias_ids, editoriales, isbn_counter
 
-    # Insertar Usuarios en ambos shards (como tienes)
     for i in range(NUM_USUARIOS):
         nombre, apellido, email, password = fake.first_name(), fake.last_name(), fake.email(), fake.password()
         for cur in [mysql1_cur, mysql2_cur]:
             cur.execute("INSERT INTO Usuarios (nombre, apellido, email, password) VALUES (%s, %s, %s, %s)", (nombre, apellido, email, password))
         usuarios.append(i + 1)
 
-    # Insertar Autores en ambos shards (guardando IDs)
     autores = []
     autores_shard2 = []
     for _ in range(NUM_AUTORES):
@@ -109,7 +107,6 @@ def insertar_datos_mysql():
         autores.append(id1)
         autores_shard2.append(id2)
 
-    # Insertar Categorías en ambos shards (guardando IDs)
     categorias_ids = []
     for cat in CATEGORIAS_MANUALES:
         mysql1_cur.execute("INSERT INTO Categorias (categoria) VALUES (%s)", (cat,))
@@ -118,7 +115,6 @@ def insertar_datos_mysql():
         id2 = mysql2_cur.lastrowid
         categorias_ids.append((id1, id2))
 
-    # Insertar Editoriales en ambos shards (guardando IDs)
     editoriales = []
     editoriales_shard2 = []
     for _ in range(NUM_EDITORIALES):
@@ -130,69 +126,67 @@ def insertar_datos_mysql():
         editoriales.append(id1)
         editoriales_shard2.append(id2)
 
-    # Insertar libros distribuidos, usando IDs correspondientes según shard
     for idx in range(NUM_LIBROS):
+        isbn = isbn_counter
+        isbn_counter += 1
+        isbn_libros[idx] = isbn
         titulo = fake.sentence(nb_words=5)
         descripcion = fake.text(max_nb_chars=200)
         precio = round(random.uniform(10, 100), 2)
         stock = random.randint(1, 50)
-
-        # Elegir categoría y editorial (par de IDs)
         cat_idx = random.randint(0, len(categorias_ids) - 1)
         editorial_idx = random.randint(0, len(editoriales) - 1)
 
         if idx in libros1_idx:
             autor_id = autores[random.randint(0, len(autores) - 1)]
-            categoria_id = categorias_ids[cat_idx][0]
-            editorial_id = editoriales[editorial_idx]
             mysql1_cur.execute("""
-                INSERT INTO Libros (titulo, descripcion, precio, stock, autor_id, categoria_id, editorial_id)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """, (titulo, descripcion, precio, stock, autor_id, categoria_id, editorial_id))
-            libros_shard1.append(mysql1_cur.lastrowid)
+                INSERT INTO Libros (isbn, titulo, descripcion, precio, stock, autor_id, categoria_id, editorial_id)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """, (isbn, titulo, descripcion, precio, stock, autor_id, categorias_ids[cat_idx][0], editoriales[editorial_idx]))
+            libros_shard1.append(isbn)
 
         elif idx in libros2_idx:
             autor_id = autores_shard2[random.randint(0, len(autores_shard2) - 1)]
-            categoria_id = categorias_ids[cat_idx][1]
-            editorial_id = editoriales_shard2[editorial_idx]
             mysql2_cur.execute("""
-                INSERT INTO Libros (titulo, descripcion, precio, stock, autor_id, categoria_id, editorial_id)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """, (titulo, descripcion, precio, stock, autor_id, categoria_id, editorial_id))
-            libros_shard2.append(mysql2_cur.lastrowid)
+                INSERT INTO Libros (isbn, titulo, descripcion, precio, stock, autor_id, categoria_id, editorial_id)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """, (isbn, titulo, descripcion, precio, stock, autor_id, categorias_ids[cat_idx][1], editoriales_shard2[editorial_idx]))
+            libros_shard2.append(isbn)
 
-        else:  # libros compartidos en ambos shards
+        else:
             autor_idx = random.randint(0, len(autores) - 1)
             autor_id1 = autores[autor_idx]
             autor_id2 = autores_shard2[autor_idx]
-
-            categoria_id1 = categorias_ids[cat_idx][0]
-            categoria_id2 = categorias_ids[cat_idx][1]
-
-            editorial_id1 = editoriales[editorial_idx]
-            editorial_id2 = editoriales_shard2[editorial_idx]
-
             mysql1_cur.execute("""
-                INSERT INTO Libros (titulo, descripcion, precio, stock, autor_id, categoria_id, editorial_id)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """, (titulo, descripcion, precio, stock, autor_id1, categoria_id1, editorial_id1))
-
+                INSERT INTO Libros (isbn, titulo, descripcion, precio, stock, autor_id, categoria_id, editorial_id)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """, (isbn, titulo, descripcion, precio, stock, autor_id1, categorias_ids[cat_idx][0], editoriales[editorial_idx]))
             mysql2_cur.execute("""
-                INSERT INTO Libros (titulo, descripcion, precio, stock, autor_id, categoria_id, editorial_id)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """, (titulo, descripcion, precio, stock, autor_id2, categoria_id2, editorial_id2))
-
-            libros_compartidos.append((mysql1_cur.lastrowid, mysql2_cur.lastrowid))
+                INSERT INTO Libros (isbn, titulo, descripcion, precio, stock, autor_id, categoria_id, editorial_id)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """, (isbn, titulo, descripcion, precio, stock, autor_id2, categorias_ids[cat_idx][1], editoriales_shard2[editorial_idx]))
+            libros_compartidos.append((isbn, isbn))
 
     mysql1.commit()
     mysql2.commit()
 
+def fechas_ordenadas(base_date, total, anios=3):
+    fechas = []
+    for i in range(total):
+        offset_dias = int((i / total) * (anios * 365))
+        fecha = base_date + timedelta(days=offset_dias)
+        fechas.append(fecha)
+    return fechas
 
 def insertar_datos_postgres():
+    base_fecha = datetime.now() - timedelta(days=3*365)
+    fechas_pedidos = fechas_ordenadas(base_fecha, NUM_PEDIDOS)
+    fechas_carritos = fechas_ordenadas(base_fecha, NUM_CARRITOS)
+    fechas_logs = fechas_ordenadas(base_fecha, NUM_LOGS_PEDIDOS)
     pedidos_pg1 = []
     pedidos_pg2 = []
+    idx_carrito, idx_pedido, idx_log = 0, 0, 0
 
-    # Insertar Cupones y Métodos de pago en ambos shards Postgres
     for cur in [pg1_cur, pg2_cur]:
         for _ in range(NUM_CUPONES // 2):
             cur.execute("INSERT INTO Cupones (codigo, descuento_porcentaje, fecha_expiracion, max_uso) VALUES (%s, %s, %s, %s)",
@@ -200,19 +194,16 @@ def insertar_datos_postgres():
         for metodo in METODOS_PAGO:
             cur.execute("INSERT INTO MetodosPago (tipo, descripcion) VALUES (%s, %s)", (metodo, fake.text(max_nb_chars=50)))
 
-    # Insertar Carritos y CarritoItems
     for i in range(NUM_CARRITOS):
         uid = random.randint(1, NUM_USUARIOS)
         cur = pg1_cur if uid - 1 in usuarios_postgres1 else pg2_cur
-        cur.execute("INSERT INTO Carritos (usuario_id) VALUES (%s) RETURNING id", (uid,))
+        fecha = fechas_carritos[idx_carrito]; idx_carrito += 1
+        cur.execute("INSERT INTO Carritos (usuario_id, fecha_creacion) VALUES (%s, %s) RETURNING id", (uid, fecha))
         carrito_id = cur.fetchone()[0]
         for _ in range(random.randint(1, 4)):
-            libro = random.choice(libros_shard1 + libros_shard2 + libros_compartidos)
-            if isinstance(libro, tuple):
-                libro = libro[0]  # Usar sólo el primer id para Postgres
+            libro = random.choice(list(isbn_libros.values()))
             cur.execute("INSERT INTO CarritoItems (carrito_id, libro_isbn, cantidad) VALUES (%s, %s, %s)", (carrito_id, libro, random.randint(1, 3)))
 
-    # Insertar Pedidos y DetallesPedido
     for i in range(NUM_PEDIDOS):
         uid = random.randint(1, NUM_USUARIOS)
         cur = pg1_cur if uid - 1 in usuarios_postgres1 else pg2_cur
@@ -222,33 +213,29 @@ def insertar_datos_postgres():
         cupon_id = cur.fetchone()[0] if random.random() < 0.3 else None
         estado = random.choice(['pendiente', 'enviado', 'entregado'])
         total = round(random.uniform(20, 500), 2)
-        cur.execute("INSERT INTO Pedidos (usuario_id, estado, total, metodo_id, cupon_id) VALUES (%s, %s, %s, %s, %s) RETURNING id", (uid, estado, total, metodo_id, cupon_id))
+        fecha = fechas_pedidos[idx_pedido]; idx_pedido += 1
+        cur.execute("INSERT INTO Pedidos (usuario_id, fecha_pedido, estado, total, metodo_id, cupon_id) VALUES (%s, %s, %s, %s, %s, %s) RETURNING id", (uid, fecha, estado, total, metodo_id, cupon_id))
         pedido_id = cur.fetchone()[0]
         if cur == pg1_cur:
             pedidos_pg1.append(pedido_id)
         else:
             pedidos_pg2.append(pedido_id)
         for _ in range(random.randint(1, 3)):
-            libro = random.choice(libros_shard1 + libros_shard2 + libros_compartidos)
-            if isinstance(libro, tuple):
-                libro = libro[0]  # Usar sólo el primer id para Postgres
+            libro = random.choice(list(isbn_libros.values()))
             cur.execute("INSERT INTO DetallesPedido (pedido_id, libro_isbn, cantidad, precio_unitario) VALUES (%s, %s, %s, %s)", (pedido_id, libro, random.randint(1, 2), round(random.uniform(10, 100), 2)))
 
-    # Insertar Direcciones
     for i in range(NUM_DIRECCIONES):
         uid = random.randint(1, NUM_USUARIOS)
         cur = pg1_cur if uid - 1 in usuarios_postgres1 else pg2_cur
-        cur.execute("INSERT INTO Direcciones (usuario_id, direccion, ciudad, departamento, pais, codigo_postal) VALUES (%s, %s, %s, %s, %s, %s)",
-                    (uid, fake.address(), fake.city(), fake.state(), fake.country(), fake.postcode()))
+        cur.execute("INSERT INTO Direcciones (usuario_id, direccion, ciudad, departamento, pais, codigo_postal) VALUES (%s, %s, %s, %s, %s, %s)", (uid, fake.address(), fake.city(), fake.state(), fake.country(), fake.postcode()))
 
-    # Insertar LogsPedidos
     for _ in range(NUM_LOGS_PEDIDOS):
         cur = pg1_cur if random.random() < 0.5 else pg2_cur
         pedido_list = pedidos_pg1 if cur == pg1_cur else pedidos_pg2
         if pedido_list:
             pedido_id = random.choice(pedido_list)
-            cur.execute("INSERT INTO LogsPedidos (pedido_id, accion, descripcion) VALUES (%s, %s, %s)",
-                        (pedido_id, random.choice(["Creado", "Pagado", "Cancelado", "Enviado"]), fake.sentence()))
+            fecha = fechas_logs[idx_log]; idx_log += 1
+            cur.execute("INSERT INTO LogsPedidos (pedido_id, accion, descripcion, fecha) VALUES (%s, %s, %s, %s)", (pedido_id, random.choice(["Creado", "Pagado", "Cancelado", "Enviado"]), fake.sentence(), fecha))
 
     pg1.commit()
     pg2.commit()
