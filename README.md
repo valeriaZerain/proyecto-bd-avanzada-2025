@@ -111,3 +111,93 @@ Con las tablas listas, carga datos de prueba o iniciales.
  python init_db.py
  ```
    - Verifica en tu SGBD que los registros se hayan insertado correctamente.
+
+# Guía rápida para levantar el Backend y conocer sus rutas
+¡Hola! Aquí te dejo los pasos para levantar el backend y una explicación sencilla de las rutas que encontrarás en la API.
+
+---
+
+## Requisitos previos
+- Tener instalado Node.js (recomendamos versión 16 o superior).
+- Docker instalado para levantar las bases de datos con Docker Compose.
+
+---
+
+## Cómo levantar el backend
+
+1. **Instala las dependencias del proyecto**
+Abre tu terminal en la carpeta del proyecto y ejecuta:
+
+```bash
+npm install
+````
+
+2. **Levanta las bases de datos y servicios con Docker Compose**
+Ejecuta este comando para iniciar todos los contenedores necesarios (Postgres, MySQL, Redis, Mongo, etc.) usando tu archivo `.env`:
+
+```bash
+docker-compose --env-file .env up -d
+```
+
+3. **Inicia el servidor**
+Finalmente, arranca el backend con:
+
+```bash
+npm run start
+```
+
+---
+
+## Rutas disponibles en la API
+Todas las rutas están bajo el prefijo `/api`.
+
+### 1. `/api/jobs/backup`
+- **¿Qué hace?**  
+    Permite ejecutar manualmente un job, para crear backups cuando quieras.    
+
+---
+### 2. `/api/sale`
+- **¿Qué hace?**  
+    Obtiene información de ventas desde una de las bases de datos con sharding según la ubicación.
+- **Ejemplo de body para solicitar datos de una ubicación:**
+
+```JSON
+{
+  "location": "location1"
+}
+```
+
+---
+
+### 3. `/api/books`
+- **¿Qué hace?**  
+    Permite insertar libros en la base de datos con sharding correspondiente según la ubicación.
+- **Ejemplo de body para agregar un libro:**
+
+```JSON
+{
+  "location": "location1",
+  "isbn": 4444,
+  "titulo": "Zod en acción",
+  "descripcion": "Un gran libro",
+  "precio": 150.99,
+  "stock": 10,
+  "autor_id": 3501,
+  "categoria_id": 26,
+  "editorial_id": 201,
+  "publicado": true
+}
+```
+
+---
+
+### 4. `/api/cart/:id`
+- **¿Qué hace?**  
+    Maneja el carrito de compras con caché en Redis para mejorar la velocidad de respuesta.
+- **Ejemplo de body para obtener el carrito según ubicación:**
+
+```JSON
+{
+  "location": "location1"
+}
+```
