@@ -4,7 +4,8 @@
   "description": "1. Crear un archivo .env en la raiz de la carpeta con los siguientes datos",
   "main": "index.js",
   "scripts": {
-    "backup": "node backup.js"
+    "dev": "nodemon ./src/index.js",
+    "start": "node ./src/index.js"
   },
   "repository": {
     "type": "git",
@@ -19,7 +20,17 @@
   },
   "homepage": "https://github.com/valeriaZerain/proyecto-bd-avanzada-2025#readme",
   "dependencies": {
+    "cors": "^2.8.5",
     "cron": "^4.3.1",
-    "dotenv": "^16.5.0"
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "ioredis": "^5.6.1",
+    "mongoose": "^8.16.0",
+    "mysql2": "^3.14.1",
+    "pg": "^8.16.2",
+    "zod": "^3.25.67"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
   }
 }
