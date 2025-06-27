@@ -1,19 +1,15 @@
 drop table logspedidos;
 create table logspedidos(
-    id serial,
-    pedido_id int,
-    action varchar(100),
-    description text,
-    fecha date default  current_date
+    id SERIAL,
+    pedido_id INT,
+    accion VARCHAR(100),
+    descripcion TEXT,
+    fecha date DEFAULT current_date
 ) partition by RANGE (fecha);
-
-create table logspedidos_2023 partition of logspedidos for values from ('2023-01-01') to ('2023-12-31');
-create table logspedidos_2024 partition of logspedidos for values from ('2024-01-01') to ('2024-12-31');
-create table logspedidos_2024 partition of logspedidos for values from ('2025-01-01') to ('2025-12-31');
-
--- index
-alter table pedidos drop column if exists  metodo_id;
-alter table pedidos ADD COLUMN metodo_id int not null default 1 references metodospago;
+create table logspedidos_2022 partition of logspedidos for values from ('2022-01-01') to ('2023-01-01');
+create table logspedidos_2023 partition of logspedidos for values from ('2023-01-01') to ('2024-01-01');
+create table logspedidos_2024 partition of logspedidos for values from ('2024-01-01') to ('2025-01-01');
+create table logspedidos_2025 partition of logspedidos for values from ('2025-01-01') to ('2026-01-01');
 
 explain analyse
 select m.tipo, count(dp.id) as cantidad_de_pedidos, sum(dp.cantidad) as total_pedido
