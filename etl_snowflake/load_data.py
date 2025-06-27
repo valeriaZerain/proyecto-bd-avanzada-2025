@@ -1,20 +1,26 @@
 import pandas as pd
 from sqlalchemy import create_engine
 from datetime import datetime
+from dotenv import load_dotenv
+import os
+
+dotenv_path = os.path.join(os.path.dirname(__file__), '../.env')
+load_dotenv(dotenv_path)
 
 # Parámetros de conexión PostgreSQL
-DB_USER = 'admin'
-DB_PASS = 'superseguro'
+DB_USER = os.getenv("DB_USER")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
 DB_HOST = 'localhost'
 DB_PORT = '5432'
-DB_NAME = 'moduloContable'
+DB_NAME = os.getenv("POSTGRES_DB_SHARD")
 
-engine = create_engine(f'postgresql+psycopg2://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}')
+engine = create_engine(f'postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}')
 
 # Leer CSV
-usuarios = pd.read_csv('C:/dev/proyecto-bd-avanzada-2025/etl_snowflake/inventario_Usuarios.csv')
-libros = pd.read_csv('C:/dev/proyecto-bd-avanzada-2025/etl_snowflake/inventario_vista_libros_detallada.csv')
-pedidos = pd.read_csv('C:/dev/proyecto-bd-avanzada-2025/etl_snowflake/moduloContable_publi_vw_pedidos_completos.csv')
+base_path = os.path.dirname(__file__)
+usuarios = pd.read_csv(os.path.join(base_path, 'inventario_Usuarios.csv'))
+libros = pd.read_csv(os.path.join(base_path, 'inventario_vista_libros_detallada.csv'))
+pedidos = pd.read_csv(os.path.join(base_path, 'moduloContable_publi_vw_pedidos_completos.csv'))
 libros = libros.rename(columns={'isbn': 'id_libro'})
 # ---------------------------
 # DIMENSION_USUARIO
